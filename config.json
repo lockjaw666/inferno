@@ -1,0 +1,15 @@
+{
+  "musicbrainz_user_agent": {
+    "name": "YOUR_APP_NAME",
+    "version": "1.0",
+    "email": "YOUR_EMAIL"
+  },
+    "tracker_url": "YOUR_ANNOUNCE_URL",
+    "output_dir": "./output",
+    "imgbb_url": "https://api.imgbb.com/1/upload",
+    "imgbb_api_key": "YOUR_IMGBB_API_KEY",
+    "file_types": [".flac", ".mp3", ".m4a", ".wav"],
+    "tracklist_filename": "tracklist.txt",
+    "tracker_api_url": "https://yoinked.org/api/torrents/upload",
+    "tracker_api_token": "YOUR_TRACKER_API_KEY"
+  }

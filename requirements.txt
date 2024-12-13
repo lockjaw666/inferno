@@ -1,0 +1,4 @@
+requests
+musicbrainzngs
+mutagen
+torf
