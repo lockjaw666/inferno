@@ -11,8 +11,13 @@ FLAC Audio Uploader for UNIT3D Trackers
 * Generates `.torrent` file
 * Uploads torrent via tracker API
 * Single album processing or batch all
+* Options configurable via `config.json`
 
+---
 
+## Run options
+
+`python3 hades.py -h` for available options. For now, use `-b` only. Set other options in `config.json`.
 
 ## Example usage
 
