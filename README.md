@@ -1,3 +1,12 @@
+# HADES
+
+Audio Uploader for UNIT3D Trackers
+
+
+
+
+
+
 ## Example usage
 
 Batch mode `-b` will process entire directory:
