@@ -30,11 +30,35 @@ FLAC Audio Uploader for UNIT3D Trackers
 
 ## Example usage
 
+Single (default) mode will process all audio files in a single directory:
+
+`python3 hades.py -d "/path/to/artist/album"`
+
 Batch mode `-b` will process entire directory:
 
 `python3 hades.py -b -d "/path/to/artist"`
 
+## Example terminal output
 
-Single mode will process all audio files in a single directory:
+Successful Upload:
 
-`python3 hades.py -d "/path/to/artist/album"`
+##############################
+Weezer - Maladroit - 2002
+------------------------------
+Cover Art: Weezer - Maladroit - 2002.jpg
+Track List: tracklist.txt
+Torrent File: Weezer - Maladroit - 2002 (FLAC).torrent
+Uploaded Torrent: https://tracker.com/torrent/download/1234567890
+##############################
+
+Duplicate torrent:
+
+##############################
+Weezer - Maladroit - 2002
+------------------------------
+Cover Art: Weezer - Maladroit - 2002.jpg
+Track List: tracklist.txt
+Torrent File: Weezer - Maladroit - 2002 (FLAC).torrent
+Upload Error: This torrent already exists on the tracker.
+##############################
+
