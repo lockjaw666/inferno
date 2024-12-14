@@ -41,24 +41,45 @@ Batch mode `-b` will process entire directory:
 ## Example terminal output
 
 Successful Upload:
-
+```
 ##############################
-Weezer - Maladroit - 2002
+Artist - Album - Year
 ------------------------------
-Cover Art: Weezer - Maladroit - 2002.jpg
+Cover Art: Artist - Album - Year.jpg
 Track List: tracklist.txt
-Torrent File: Weezer - Maladroit - 2002 (FLAC).torrent
+Torrent File: Artist - Album - Year (FLAC).torrent
 Uploaded Torrent: https://tracker.com/torrent/download/1234567890
 ##############################
-
+```
 Duplicate torrent:
-
+```
 ##############################
-Weezer - Maladroit - 2002
+Artist - Album - Year
 ------------------------------
-Cover Art: Weezer - Maladroit - 2002.jpg
+Cover Art: Artist - Album - Year.jpg
 Track List: tracklist.txt
-Torrent File: Weezer - Maladroit - 2002 (FLAC).torrent
+Torrent File: Artist - Album - Year (FLAC).torrent
 Upload Error: This torrent already exists on the tracker.
 ##############################
+```
 
+## Example tracklist.txt
+
+Script will get links for medium and full size images for display
+
+```
+Tracklist:
+
+1. Track 1 [3:48]
+2. Track 2 [4:39]
+3. Track 3 [3:59]
+4. Track 4 [2:58]
+5. Track 5 [4:44]
+6. Track 6 [4:49]
+7. Track 7 [2:57]
+8. Track 8 [3:53]
+
+Album Length: 31:47
+
+[url=https://i.ibb.co/DXxg/Artist-Album-Year.jpg][img]https://i.ibb.co/pf9T/Artist-Album-Year.jpg[/img][/url]
+```
