@@ -12,7 +12,7 @@ FLAC Audio Uploader for UNIT3D Trackers
 * Uploads torrent via tracker API
 * Single album processing or batch all
 * Options configurable via `config.json`
-* Supports Linux and MacOS (Windows: ¯\_(ツ)_/¯ )
+* Supports Linux and MacOS (Windows: ¯\\_(ツ)_/¯ )
 
 ---
 
