@@ -11,6 +11,7 @@ FLAC Audio Uploader for UNIT3D Trackers
 * Generates `.torrent` file
 * Uploads torrent via tracker API
 * Single album processing or batch all
+* Handling of multi-disc albums
 * Options configurable via `config.json`
 * Supports Linux and MacOS (Windows: ¯\\_(ツ)_/¯ )
 
