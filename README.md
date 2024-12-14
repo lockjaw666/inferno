@@ -1,4 +1,4 @@
-# Example usage
+## Example usage
 
 Batch mode `-b` will process entire directory:
 
