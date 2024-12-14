@@ -12,8 +12,17 @@ FLAC Audio Uploader for UNIT3D Trackers
 * Uploads torrent via tracker API
 * Single album processing or batch all
 * Options configurable via `config.json`
+* Supports Linux and MacOS (Windows: ¯\_(ツ)_/¯ )
 
 ---
+
+## Installation
+
+1. Clone/download the repository
+2. Place in whichever directory works for you
+3. Install dependencies `pip3 install -r requirements.txt`
+4. Edit `config.json`
+
 
 ## Run options
 
