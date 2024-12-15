@@ -1,10 +1,10 @@
 # HADES
-FLAC Audio Uploader for UNIT3D Trackers
+FLAC/MP3 Audio Uploader for UNIT3D Trackers
 
 
 ## Features
 
-* Extracts Vorbis tags from FLAC files
+* Extracts Vorbis/ID3 tags from FLAC/MP3 files
 * Downloads album cover art from MusizBrainz
 * Uploads album cover art to imgbb.com
 * Generates text file with all gathered information
