@@ -1,9 +1,11 @@
 import os
+import sys
 import json
 import argparse
 import requests
 import musicbrainzngs
 from mutagen import File
+from mutagen.id3 import ID3, TDRC
 from torf import Torrent
 
 def load_config(config_file="config.json"):
@@ -36,13 +38,23 @@ def fetch_album_info(directory, config):
         raise FileNotFoundError("No supported audio files found in the specified directory.")
 
     metadata = File(files[0])  # Use the first file to get metadata
-    artist = metadata.get("artist")[0]
-    album = metadata.get("album")[0]
-    year = metadata.get("date")[0]
 
-    # Extract only the year if the date includes more detail
-    if len(year) > 4:
-        year = year[:4]
+    # Handle MP3 files specifically
+    if files[0].lower().endswith(".mp3"):
+        artist = metadata.get("TPE1", ["Unknown Artist"])[0]  # ID3 tag for artist
+        album = metadata.get("TALB", ["Unknown Album"])[0]   # ID3 tag for album
+        year = metadata.get("TDRC", ["Unknown Date"])[0]     # ID3 tag for date
+
+        # If year is an ID3TimeStamp, extract just the year
+        if isinstance(year, TDRC):
+            year = str(year.text[0][:4])  # Extract only the year from the timestamp
+        elif isinstance(year, str) and len(year) > 4:  # If it's a string but has extra details
+            year = year[:4]  # Trim to just the year
+    else:
+        # Default FLAC handling
+        artist = metadata.get("artist", ["Unknown Artist"])[0] if metadata.get("artist") else "Unknown Artist"
+        album = metadata.get("album", ["Unknown Album"])[0] if metadata.get("album") else "Unknown Album"
+        year = metadata.get("date", ["Unknown Date"])[0] if metadata.get("date") else "Unknown Date"
 
     release_id = None
     cover_url = None
@@ -314,4 +326,8 @@ def main():
         process_album(directory, config, output_base, tracker_url)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nUser stopped script execution.")
+        sys.exit(0)  # Ensure a clean exit with status 0
