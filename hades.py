@@ -92,16 +92,16 @@ def download_cover_art(url, output_dir):
     except requests.exceptions.RequestException:
         return None
 
-def upload_to_imgbb(api_key, image_path, imgbb_url):
+def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
     """Upload an image to imgbb and return the formatted URL."""
-    if not api_key or not os.path.exists(image_path):
+    if not imgbb_api_key or not os.path.exists(image_path):
         return None
 
     try:
         with open(image_path, "rb") as f:
             response = requests.post(
                 imgbb_url,
-                params={"key": api_key},
+                params={"key": imgbb_api_key},
                 files={"image": f}
             )
         response.raise_for_status()
@@ -175,21 +175,21 @@ def generate_track_list(files, output_file, cover_url=None):
         if cover_url:
             f.write(f"\n{cover_url}\n")
 
-def create_torrent(directory, output_file, tracker_url):
+def create_torrent(directory, output_file, tracker_announce):
     """Generate a .torrent file with dynamic piece size."""
     directory_size = calculate_directory_size(directory)
     piece_size = determine_piece_size(directory_size)
 
     torrent = Torrent(
         path=directory,
-        trackers=[tracker_url],
+        trackers=[tracker_announce],
         piece_size=piece_size,
         private=True,
     )
     torrent.generate()
     torrent.write(output_file)
 
-def upload_torrent_to_tracker(api_url, api_token, torrent_path, tracklist_path, artist, album, year, file_type, anonymous):
+def upload_torrent_to_tracker(torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous):
     """Upload the generated torrent file to the tracker."""
     try:
         with open(torrent_path, "rb") as torrent_file:
@@ -210,20 +210,21 @@ def upload_torrent_to_tracker(api_url, api_token, torrent_path, tracklist_path, 
                 "description": description,
                 "category_id": 3,
                 "type_id": type_id,
+                "anonymous": anonymous,
+                "api_token": tracker_api_token,
                 "tmdb": 0,
                 "imdb": 0,
                 "tvdb": 0,
                 "mal": 0,
                 "igdb": 0,
-                "anonymous": anonymous,
                 "stream": 0,
-                "sd": 0,
+                "sd": 0
             }
             headers = {
-                "Authorization": f"Bearer {api_token}",
+                "Authorization": f"Bearer {tracker_api_token}",
                 "Accept": "application/json"
             }
-            response = requests.post(api_url, data=data, files=files, headers=headers)
+            response = requests.post(tracker_api_url, data=data, files=files, headers=headers)
             
             if response.status_code == 200:
                 # Parse the JSON response and extract the URL
@@ -242,7 +243,7 @@ def upload_torrent_to_tracker(api_url, api_token, torrent_path, tracklist_path, 
     except Exception as e:
         print(f"Error uploading torrent: {e}")
 
-def process_album(directory, config, output_base, tracker_url, anonymous):
+def process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous):
     try:
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
@@ -286,27 +287,25 @@ def process_album(directory, config, output_base, tracker_url, anonymous):
     # Generate .torrent file with dynamic file type in name
     try:
         torrent_file = os.path.join(output_dir, f"{artist} - {album} - {year} ({file_type}).torrent")
-        create_torrent(directory, torrent_file, tracker_url)
+        create_torrent(directory, torrent_file, tracker_announce)
         print(f"Torrent File: {os.path.basename(torrent_file)}")
     except Exception as e:
         print(f"Error creating torrent file for album {album}: {str(e)}")
 
     # Upload the torrent file to the tracker
     try:
-        api_url = config.get("tracker_api_url")
-        api_token = config.get("tracker_api_token")
-        upload_torrent_to_tracker(api_url, api_token, torrent_file, tracklist_file, artist, album, year, file_type, anonymous)
+        upload_torrent_to_tracker(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous)
     except Exception as e:
         print(f"Error uploading torrent for album {album}: {str(e)}")
 
     print(f"{'#' * 30}\n")
 
-def batch_process(artist_directory, config, output_base, tracker_url, anonymous):
+def batch_process(artist_directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous):
     # Process all albums in the artist directory
     for album_dir in os.listdir(artist_directory):
         album_path = os.path.join(artist_directory, album_dir)
         if os.path.isdir(album_path):
-            process_album(album_path, config, output_base, tracker_url, anonymous)
+            process_album(album_path, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous)
 
 def main():
     # Load configuration from config.json
@@ -320,22 +319,32 @@ def main():
     parser.add_argument("-d", "--directory", help="Path to the directory containing audio files or an artist directory.")
     parser.add_argument("-b", "--batch", action="store_true", help="Batch process all albums in an artist directory.")
     parser.add_argument("-o", "--output", help="Output directory.")
-    parser.add_argument("-t", "--tracker", help="Tracker URL.")
+    parser.add_argument("-t", "--tracker", help="Tracker. Mandatory.")
     parser.add_argument("-anon", "--anonymous", action="store_true", help="Set upload as anonymous.")
     args = parser.parse_args()
 
     # Fallback if no config value or command line argument is provided
     directory = args.directory
-    tracker_url = args.tracker or config.get("tracker_url")
+    tracker_name = args.tracker
+    tracker_config = config.get("trackers", {}).get(tracker_name)
+
+    if not tracker_config:
+        print(f"Error: Tracker flag must be provided or provided tracker code is incorrect.")
+        sys.exit(1)
+
+    tracker_announce = tracker_config.get("tracker_announce")
+    tracker_api_url = tracker_config.get("tracker_api_url")
+    tracker_api_token = tracker_config.get("tracker_api_token")
+
     output_base = args.output or config.get("output_dir") or os.getcwd()
 
     # Set the 'anonymous' value based on the flag
     anonymous = 1 if args.anonymous else 0
 
     if args.batch:
-        batch_process(directory, config, output_base, tracker_url, anonymous)
+        batch_process(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous)
     else:
-        process_album(directory, config, output_base, tracker_url, anonymous)
+        process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous)
 
 if __name__ == "__main__":
     try:
