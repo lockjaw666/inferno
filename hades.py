@@ -189,25 +189,33 @@ def create_torrent(directory, output_file, tracker_url):
     torrent.generate()
     torrent.write(output_file)
 
-def upload_torrent_to_tracker(api_url, api_token, torrent_path, tracklist_path, artist, album, year, file_type):
+def upload_torrent_to_tracker(api_url, api_token, torrent_path, tracklist_path, artist, album, year, file_type, anonymous):
     """Upload the generated torrent file to the tracker."""
     try:
         with open(torrent_path, "rb") as torrent_file:
             with open(tracklist_path, "r") as tracklist_file:
                 description = tracklist_file.read()
 
+            # Set the type_id dynamically based on file_type
+            if file_type.lower() == 'flac':
+                type_id = 7  # FLAC
+            elif file_type.lower() == 'mp3':
+                type_id = 8  # MP3
+            else:
+                raise ValueError(f"Unsupported file type: {file_type}")
+
             files = {"torrent": torrent_file}
             data = {
                 "name": f"{artist} - {album} {year} {file_type}",
                 "description": description,
                 "category_id": 3,
-                "type_id": 7,
+                "type_id": type_id,
                 "tmdb": 0,
                 "imdb": 0,
                 "tvdb": 0,
                 "mal": 0,
                 "igdb": 0,
-                "anonymous": 1,
+                "anonymous": anonymous,
                 "stream": 0,
                 "sd": 0,
             }
@@ -234,7 +242,7 @@ def upload_torrent_to_tracker(api_url, api_token, torrent_path, tracklist_path, 
     except Exception as e:
         print(f"Error uploading torrent: {e}")
 
-def process_album(directory, config, output_base, tracker_url):
+def process_album(directory, config, output_base, tracker_url, anonymous):
     try:
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
@@ -287,18 +295,18 @@ def process_album(directory, config, output_base, tracker_url):
     try:
         api_url = config.get("tracker_api_url")
         api_token = config.get("tracker_api_token")
-        upload_torrent_to_tracker(api_url, api_token, torrent_file, tracklist_file, artist, album, year, file_type)
+        upload_torrent_to_tracker(api_url, api_token, torrent_file, tracklist_file, artist, album, year, file_type, anonymous)
     except Exception as e:
         print(f"Error uploading torrent for album {album}: {str(e)}")
 
     print(f"{'#' * 30}\n")
 
-def batch_process(artist_directory, config, output_base, tracker_url):
+def batch_process(artist_directory, config, output_base, tracker_url, anonymous):
     # Process all albums in the artist directory
     for album_dir in os.listdir(artist_directory):
         album_path = os.path.join(artist_directory, album_dir)
         if os.path.isdir(album_path):
-            process_album(album_path, config, output_base, tracker_url)
+            process_album(album_path, config, output_base, tracker_url, anonymous)
 
 def main():
     # Load configuration from config.json
@@ -313,6 +321,7 @@ def main():
     parser.add_argument("-b", "--batch", action="store_true", help="Batch process all albums in an artist directory.")
     parser.add_argument("-o", "--output", help="Output directory.")
     parser.add_argument("-t", "--tracker", help="Tracker URL.")
+    parser.add_argument("-anon", "--anonymous", action="store_true", help="Set upload as anonymous.")
     args = parser.parse_args()
 
     # Fallback if no config value or command line argument is provided
@@ -320,10 +329,13 @@ def main():
     tracker_url = args.tracker or config.get("tracker_url")
     output_base = args.output or config.get("output_dir") or os.getcwd()
 
+    # Set the 'anonymous' value based on the flag
+    anonymous = 1 if args.anonymous else 0
+
     if args.batch:
-        batch_process(directory, config, output_base, tracker_url)
+        batch_process(directory, config, output_base, tracker_url, anonymous)
     else:
-        process_album(directory, config, output_base, tracker_url)
+        process_album(directory, config, output_base, tracker_url, anonymous)
 
 if __name__ == "__main__":
     try:
