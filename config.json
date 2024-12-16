@@ -4,12 +4,21 @@
     "version": "1.0",
     "email": "YOUR_EMAIL"
   },
-    "tracker_url": "YOUR_ANNOUNCE_URL",
-    "output_dir": "./output",
+    "output_dir": "/path/to/output",
     "imgbb_url": "https://api.imgbb.com/1/upload",
-    "imgbb_api_key": "YOUR_IMGBB_API_KEY",
+    "imgbb_api_key": "YOUR_API_KEY",
     "file_types": [".flac", ".mp3"],
     "tracklist_filename": "tracklist.txt",
-    "tracker_api_url": "https://yoinked.org/api/torrents/upload",
-    "tracker_api_token": "YOUR_TRACKER_API_KEY"
+    "trackers": {
+      "tracker1": {
+        "tracker_announce": "https://tracker1.com/announce/xxx",
+        "tracker_api_url": "https://tracker1.com/api/torrents/upload",
+        "tracker_api_token": "yyy"
+      },
+      "tracker2": {
+        "tracker_announce": "https://tracker2.com/announce/xxx",
+        "tracker_api_url": "https://tracker2.com/api/torrents/upload",
+        "tracker_api_token": "yyy"
+      }
+    }
   }
