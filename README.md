@@ -28,17 +28,23 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers
 
 ## Run options
 
-`python3 hades.py -h` for available options. For now, use `-b` and `-anon` only. Set other options in `config.json`.
+`python3 hades.py -h` for available options.
+
+For now, use `-b`, `-anon` and `-t` only. Set other options in `config.json`.
 
 ## Example usage
 
-Single (default) mode will process all audio files in a single directory:
+* Single (default) mode will process all audio files in a single directory:
 
-`python3 hades.py -d "/path/to/artist/album"`
+  `python3 hades.py -t trk -d "/path/to/artist/album"`
 
-Batch mode `-b` will process entire artist directory:
+* Batch mode `-b` will process entire artist directory:
 
-`python3 hades.py -b -d "/path/to/artist"`
+  `python3 hades.py -t trk -b -d "/path/to/artist"`
+
+* If provided `-anon` flag will set the upload as anonymous:
+
+  `python3 hades.py -anon -t trk -b -d "/path/to/artist"`
 
 ## Example terminal output
 
