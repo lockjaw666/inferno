@@ -10,10 +10,12 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers
 * Generates text file with all gathered information
 * Generates `.torrent` file
 * Uploads torrent via tracker API
+* Auto-inject torrent URL into qBittorrent
 * Anonymous and non-anonymous uploads
 * Single album processing or batch all
+* Set tracker options (personal release, double upload)
 * Handling of multi-disc albums
-* Options configurable via `config.json`
+* Options configurable via `config.toml`
 * Supports Linux and MacOS (Windows: ¯\\_(ツ)_/¯ )
 
 ---
