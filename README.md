@@ -1,10 +1,14 @@
 # HADES
-FLAC/MP3 Audio Uploader for UNIT3D Trackers
+FLAC/MP3 Audio Uploader for UNIT3D Trackers.
+
+
+**NOTE:** This is a personal tool developed to do things quick and dirty. While there is little to no error checking, script will try to correct certain things. That being said, it is your responsibility to check everything and make sure what you upload is correct.
 
 
 ## Features
 
 * Extracts Vorbis/ID3 tags from FLAC/MP3 files
+* Check for existing cover art (cover.jpg)
 * Downloads album cover art from MusizBrainz
 * Uploads album cover art to imgbb.com
 * Generates text file with all gathered information
@@ -25,14 +29,14 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers
 1. Clone/download the repository
 2. Place in whichever directory works for you
 3. Install dependencies `pip3 install -r requirements.txt`
-4. Edit `config.json`
+4. Edit `./config/config.toml`
 
 
 ## Run options
 
 `python3 hades.py -h` for available options.
 
-For now, use `-b`, `-anon` and `-t` only. Set other options in `config.json`.
+For now, use `-b`, `-anon`, `-t`, `-pr` and `-du` only. Set other options in `./config/config.toml`.
 
 ## Example usage
 
