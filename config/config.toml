@@ -1,0 +1,35 @@
+# General
+output_dir = "YOUR_OUTPUT_DIR"
+file_types = [".flac", ".mp3"]
+tracklist_filename = "tracklist.txt"
+
+# imgBB API
+imgbb_url = "https://api.imgbb.com/1/upload"
+imgbb_api_key = "IMGBB_API_KEY"
+
+# MusicBrainz API
+[musicbrainz_user_agent]
+name = "YOUR_APP_NAME"
+version = "1.0"
+email = "YOUR_EMAIL"
+
+# qBittorrent API
+[qBittorrent]
+qb_url = "YOUR_QB_URL"
+username = "QB_USERNAME"
+password = "QB_PASSWORD"
+category = "MUSIC"
+tags = "MUSIC"
+save_path = "/downloads/music/mp3/{artist}"
+paused = "false"
+
+# Trackers
+[trackers.yoink]
+tracker_announce = "https://yoinked.org/announce/YOUR_ANNOUNCE"
+tracker_api_url = "https://yoinked.org/api/torrents/upload"
+tracker_api_token = "YOUR_API_TOKEN"
+
+[trackers.othertracker]
+tracker_announce = "https://othertracker.com/announce/xxx"
+tracker_api_url = "https://othertracker.com/api/torrents/upload"
+tracker_api_token = "xxx"
