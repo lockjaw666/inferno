@@ -1,20 +1,64 @@
 import os
 import sys
-import json
+import tomli
 import argparse
 import requests
 import musicbrainzngs
 from mutagen import File
-from mutagen.id3 import ID3, TDRC
 from torf import Torrent
 
-def load_config(config_file="config.json"):
-    """Load configuration from a JSON file."""
+def qb_inject(config, torrent_url, artist):
+    qb_url = config['qBittorrent']['qb_url']
+    username = config['qBittorrent']['username']
+    password = config['qBittorrent']['password']
+    category = config['qBittorrent']['category']
+    tags = config['qBittorrent']['tags']
+    paused = config['qBittorrent']['paused']
+
+    # Dynamically adjust save path
+    save_path_template = config['qBittorrent']['save_path']
+    save_path = save_path_template.format(artist=artist)
+
+    # Create a session to maintain cookies
+    session = requests.Session()
+
+    # Perform the login
+    login_data = {'username': username, 'password': password}
+    login_response = session.post(f'{qb_url}/api/v2/auth/login', data=login_data)
+
+    # Check if login was successful
+    if login_response.status_code == 200:
+        print("qBittorrent login successful!")
+    else:
+        print(f"Login failed! Status code: {login_response.status_code}, Response: {login_response.text}")
+        return
+
+    # Add the torrent from the URL
+    torrent_data = {
+        'urls': torrent_url,
+        'savepath': save_path,
+        'category': category,
+        'tags': tags,
+        'paused': paused
+    }
+
+    add_torrent_response = session.post(f'{qb_url}/api/v2/torrents/add', data=torrent_data)
+
+    # Check if the torrent was successfully added
+    if add_torrent_response.status_code == 200:
+        print(f"Torrent added to qBittorrent.")
+    else:
+        print(f"Failed to add torrent! Status code: {add_torrent_response.status_code}, Response: {add_torrent_response.text}")
+def load_config():
+    """Load configuration from a TOML file in the 'config' directory."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_file = os.path.join(base_dir, "config", "config.toml")
     try:
-        with open(config_file, "r") as f:
-            config = json.load(f)
+        with open(config_file, "rb") as f:
+            config = tomli.load(f)
         return config
     except Exception as e:
+        print(f"Error loading config: {e}")
         return {}
 
 def setup_musicbrainz(config):
@@ -37,19 +81,14 @@ def fetch_album_info(directory, config):
     if not files:
         raise FileNotFoundError("No supported audio files found in the specified directory.")
 
-    metadata = File(files[0])  # Use the first file to get metadata
+    metadata = File(files[0])
 
     # Handle MP3 files specifically
     if files[0].lower().endswith(".mp3"):
-        artist = metadata.get("TPE1", ["Unknown Artist"])[0]  # ID3 tag for artist
-        album = metadata.get("TALB", ["Unknown Album"])[0]   # ID3 tag for album
-        year = metadata.get("TDRC", ["Unknown Date"])[0]     # ID3 tag for date
+        artist = metadata.get("TPE1", ["Unknown Artist"])[0]
+        album = metadata.get("TALB", ["Unknown Album"])[0]
+        year = metadata.get("TDRC", ["Unknown Date"])[0]
 
-        # If year is an ID3TimeStamp, extract just the year
-        if isinstance(year, TDRC):
-            year = str(year.text[0][:4])  # Extract only the year from the timestamp
-        elif isinstance(year, str) and len(year) > 4:  # If it's a string but has extra details
-            year = year[:4]  # Trim to just the year
     else:
         # Default FLAC handling
         artist = metadata.get("artist", ["Unknown Artist"])[0] if metadata.get("artist") else "Unknown Artist"
@@ -74,7 +113,7 @@ def fetch_album_info(directory, config):
     except musicbrainzngs.WebServiceError as e:
         pass
 
-    return artist, album, year, cover_url, files[0].split('.')[-1].upper(), files  # Return file type and list of files
+    return artist, album, year, cover_url, files[0].split('.')[-1].upper(), files
 
 def download_cover_art(url, output_dir):
     """Download album cover art."""
@@ -83,7 +122,7 @@ def download_cover_art(url, output_dir):
 
     try:
         response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise an HTTPError for bad responses
+        response.raise_for_status()
         cover_path = os.path.join(output_dir, "cover.jpg")
         with open(cover_path, "wb") as f:
             for chunk in response.iter_content(1024):
@@ -113,7 +152,7 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
         return None
 
 def determine_piece_size(directory_size):
-    """Determine an optimal piece size based on the directory size."""
+    """Determine an optimal piece size based on the directory size. Taken from RED"""
     if directory_size <= 50 * 1024 ** 2:  # Up to 50 MiB
         return 32 * 1024  # 32 KiB
     elif directory_size <= 150 * 1024 ** 2:  # 50 MiB to 150 MiB
@@ -175,7 +214,7 @@ def generate_track_list(files, output_file, cover_url=None):
         if cover_url:
             f.write(f"\n{cover_url}\n")
 
-def create_torrent(directory, output_file, tracker_announce):
+def create_torrent(directory, output_file, tracker_announce, artist, album, year, source, file_type, bitrate):
     """Generate a .torrent file with dynamic piece size."""
     directory_size = calculate_directory_size(directory)
     piece_size = determine_piece_size(directory_size)
@@ -186,11 +225,17 @@ def create_torrent(directory, output_file, tracker_announce):
         piece_size=piece_size,
         private=True,
     )
+
+    # Ensure the name is set correctly inside the torrent
+    torrent.name = f"{artist} - {album} {year} {source} {file_type} {bitrate}"
+
     torrent.generate()
     torrent.write(output_file)
 
-def upload_torrent_to_tracker(torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous):
-    """Upload the generated torrent file to the tracker."""
+def upload_torrent(
+    torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url,
+    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config
+):
     try:
         with open(torrent_path, "rb") as torrent_file:
             with open(tracklist_path, "r") as tracklist_file:
@@ -198,19 +243,21 @@ def upload_torrent_to_tracker(torrent_path, tracklist_path, artist, album, year,
 
             # Set the type_id dynamically based on file_type
             if file_type.lower() == 'flac':
-                type_id = 7  # FLAC
+                type_id = 7
             elif file_type.lower() == 'mp3':
-                type_id = 8  # MP3
+                type_id = 8
             else:
                 raise ValueError(f"Unsupported file type: {file_type}")
 
             files = {"torrent": torrent_file}
             data = {
-                "name": f"{artist} - {album} {year} {file_type}",
+                "name": f"{artist} - {album} {year} {source} {file_type} {bitrate}",
                 "description": description,
                 "category_id": 3,
                 "type_id": type_id,
                 "anonymous": anonymous,
+                "personal_release": personal_release,
+                "doubleup": doubleup,
                 "api_token": tracker_api_token,
                 "tmdb": 0,
                 "imdb": 0,
@@ -218,21 +265,23 @@ def upload_torrent_to_tracker(torrent_path, tracklist_path, artist, album, year,
                 "mal": 0,
                 "igdb": 0,
                 "stream": 0,
-                "sd": 0
+                "sd": 0,
             }
             headers = {
                 "Authorization": f"Bearer {tracker_api_token}",
                 "Accept": "application/json"
             }
             response = requests.post(tracker_api_url, data=data, files=files, headers=headers)
-            
+
             if response.status_code == 200:
                 # Parse the JSON response and extract the URL
                 response_data = response.json()
                 torrent_url = response_data.get("data")
-                
+
                 if torrent_url:
                     print(f"Uploaded Torrent: {torrent_url}")
+                    # Inject the torrent URL into qBittorrent
+                    qb_inject(config, torrent_url, artist)
                 else:
                     print("Error: No torrent URL returned.")
             elif response.status_code == 404 and 'info_hash' in response.json().get('data', {}):
@@ -243,11 +292,11 @@ def upload_torrent_to_tracker(torrent_path, tracklist_path, artist, album, year,
     except Exception as e:
         print(f"Error uploading torrent: {e}")
 
-def process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous):
+def process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate):
     try:
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
-        print(f"\n{'#' * 30}\n{artist} - {album} - {year}\n{'-' * 30}")
+        print(f"\n{'#' * 30}\n{artist} - {album} {year}\n{'-' * 30}")
     except Exception as e:
         print(f"\n{'#' * 30}\nError processing album in directory: {directory} - {str(e)}\n{'#' * 30}")
         return
@@ -255,26 +304,38 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
     output_dir = os.path.join(output_base, artist, f"{album} ({year})")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Download the cover art if available
-    cover_path = None
-    if cover_url:
+    # Check if cover.jpg exists in the directory
+    cover_path = os.path.join(directory, "cover.jpg")
+    uploaded_cover_url = None
+
+    if os.path.exists(cover_path):
+        imgbb_api_key = config.get("imgbb_api_key")
+        imgbb_url = config.get("imgbb_url")
         try:
-            cover_path = download_cover_art(cover_url, output_dir)
-            if cover_path:
-                cover_file_name = f"{artist} - {album} - {year}.jpg"
-                cover_file_path = os.path.join(output_dir, cover_file_name)
-                os.rename(cover_path, cover_file_path)
-                print(f"Cover Art: {cover_file_name}")
-                # Upload cover art to imgbb
-                imgbb_api_key = config.get("imgbb_api_key")
-                imgbb_url = config.get("imgbb_url")
-                uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_file_path, imgbb_url)
-            else:
-                print("Cover Art: Not Found")
-                uploaded_cover_url = None
+            uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
+            print("Cover Art: Uploaded existing cover.jpg")
         except Exception as e:
-            print(f"Error downloading cover art: {str(e)}")
-            uploaded_cover_url = None
+            print(f"Error uploading local cover.jpg: {str(e)}")
+    else:
+    # Download the cover art if available
+        if cover_url:
+            try:
+                cover_path = download_cover_art(cover_url, output_dir)
+                if cover_path:
+                    cover_file_name = f"{artist} - {album} {year}.jpg"
+                    cover_file_path = os.path.join(output_dir, cover_file_name)
+                    os.rename(cover_path, cover_file_path)
+                    print(f"Cover Art: {cover_file_name}")
+                    # Upload cover art to imgbb
+                    imgbb_api_key = config.get("imgbb_api_key")
+                    imgbb_url = config.get("imgbb_url")
+                    uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_file_path, imgbb_url)
+                else:
+                    print("Cover Art: Not Found")
+                    uploaded_cover_url = None
+            except Exception as e:
+                print(f"Error downloading cover art: {str(e)}")
+                uploaded_cover_url = None
 
     # Generate tracklist.txt file
     try:
@@ -286,26 +347,26 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
 
     # Generate .torrent file with dynamic file type in name
     try:
-        torrent_file = os.path.join(output_dir, f"{artist} - {album} - {year} ({file_type}).torrent")
-        create_torrent(directory, torrent_file, tracker_announce)
+        torrent_file = os.path.join(output_dir, f"{artist} - {album} {year} {source} {file_type} {bitrate}.torrent")
+        create_torrent(directory, torrent_file, tracker_announce, artist, album, year, source, file_type, bitrate)
         print(f"Torrent File: {os.path.basename(torrent_file)}")
     except Exception as e:
         print(f"Error creating torrent file for album {album}: {str(e)}")
 
     # Upload the torrent file to the tracker
     try:
-        upload_torrent_to_tracker(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous)
+        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config)
     except Exception as e:
         print(f"Error uploading torrent for album {album}: {str(e)}")
 
     print(f"{'#' * 30}\n")
 
-def batch_process(artist_directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous):
+def batch_process(artist_directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate):
     # Process all albums in the artist directory
     for album_dir in os.listdir(artist_directory):
         album_path = os.path.join(artist_directory, album_dir)
         if os.path.isdir(album_path):
-            process_album(album_path, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous)
+            process_album(album_path, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate)
 
 def main():
     # Load configuration from config.json
@@ -316,11 +377,16 @@ def main():
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Generate a .torrent file and metadata for audio files.")
-    parser.add_argument("-d", "--directory", help="Path to the directory containing audio files or an artist directory.")
+    parser.add_argument("-d", "--directory", required=True, help="Path to the directory containing audio files or an artist directory.")
     parser.add_argument("-b", "--batch", action="store_true", help="Batch process all albums in an artist directory.")
-    parser.add_argument("-o", "--output", help="Output directory.")
-    parser.add_argument("-t", "--tracker", help="Tracker. Mandatory.")
-    parser.add_argument("-anon", "--anonymous", action="store_true", help="Set upload as anonymous.")
+    parser.add_argument("-o", "--output", help="Output directory. Defaults to config.json if not specified.")
+    parser.add_argument("-t", "--tracker", required=True, help="Tracker name(s) from config.json.")
+    parser.add_argument("-anon", "--anonymous", action="store_true", help="Set upload as anonymous. Defaults to non-anonymous, if not specified.")
+    parser.add_argument("-s", "--source", required=True, help="Source of the files (e.g., WEB, CD).")
+    parser.add_argument("-br", "--bitrate", required=True, help="Bitrate of the files (e.g., V0, 320).")
+    parser.add_argument("-pr", "--personal_release", action="store_true", help="Set upload as personal release. Defaults to non-personal release, if not specified.")
+    parser.add_argument("-du", "--doubleup", action="store_true", help="Set torrent as double upload. Only available to staff and internal users.")
+
     args = parser.parse_args()
 
     # Fallback if no config value or command line argument is provided
@@ -341,14 +407,20 @@ def main():
     # Set the 'anonymous' value based on the flag
     anonymous = 1 if args.anonymous else 0
 
+    # Set the 'personal_release' value based on the flag
+    personal_release = 1 if args.personal_release else 0
+
+    # Set the 'doubleup' value based on the flag
+    doubleup = 1 if args.doubleup else 0
+
     if args.batch:
-        batch_process(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous)
+        batch_process(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate)
     else:
-        process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous)
+        process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate)
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nUser stopped script execution.")
-        sys.exit(0)  # Ensure a clean exit with status 0
+        print("\n(╯°□°)╯︵ ┻━┻\n")
+        sys.exit(0)
