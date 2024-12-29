@@ -49,6 +49,7 @@ def qb_inject(config, torrent_url, artist):
         print(f"Torrent added to qBittorrent.")
     else:
         print(f"Failed to add torrent! Status code: {add_torrent_response.status_code}, Response: {add_torrent_response.text}")
+
 def load_config():
     """Load configuration from a TOML file in the 'config' directory."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -135,7 +136,6 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
     """Upload an image to imgbb and return the formatted URL."""
     if not imgbb_api_key or not os.path.exists(image_path):
         return None
-
     try:
         with open(image_path, "rb") as f:
             response = requests.post(
@@ -143,12 +143,27 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
                 params={"key": imgbb_api_key},
                 files={"image": f}
             )
-        response.raise_for_status()
+            
+        # Print the raw returned message from the API. Use for debugging.
+        # print(response.text)
+        
+        # Parse the JSON response
         data = response.json()
+        
+        # Check for API rate limit error in the response
+        if response.status_code != 200:
+            if data.get("status_code") == 400 and data.get("error", {}).get("code") == 100:
+                print("imgBB Error:", data["error"]["message"])
+                return None
+            print("Error:", data.get("error", {}).get("message", "Unknown error"))
+            return None
+
         img_url = data["data"].get("url")
         thumb_url = data["data"].get("medium", {}).get("url", img_url)
         return f"[url={img_url}][img]{thumb_url}[/img][/url]"
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        # Print the exception details
+        print("Request failed:", e)
         return None
 
 def determine_piece_size(directory_size):
@@ -312,8 +327,11 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         imgbb_api_key = config.get("imgbb_api_key")
         imgbb_url = config.get("imgbb_url")
         try:
-            uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
-            print("Cover Art: Uploaded existing cover.jpg")
+            cover_art_url = uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
+            if cover_art_url:
+                print("Cover Art: Uploaded existing cover.jpg")
+            else:
+                print("Cover Art: Upload failed or skipped due to API error.")
         except Exception as e:
             print(f"Error uploading local cover.jpg: {str(e)}")
     else:
