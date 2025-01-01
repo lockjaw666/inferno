@@ -1,4 +1,4 @@
-# HADES
+# INFERNO
 FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 
 
@@ -34,7 +34,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 
 ## Run options
 
-`python3 hades.py -h` for available options.
+`python3 inferno.py -h` for available options.
 
 For now, use `-b`, `-anon`, `-t`, `-pr` and `-du` only. Set other options in `./config/config.toml`.
 
@@ -42,15 +42,15 @@ For now, use `-b`, `-anon`, `-t`, `-pr` and `-du` only. Set other options in `./
 
 * Single (default) mode will process all audio files in a single directory:
 
-  `python3 hades.py -t trk -d "/path/to/artist/album"`
+  `python3 inferno.py -t trk -d "/path/to/artist/album"`
 
 * Batch mode `-b` will process entire artist directory:
 
-  `python3 hades.py -t trk -b -d "/path/to/artist"`
+  `python3 inferno.py -t trk -b -d "/path/to/artist"`
 
 * If provided `-anon` flag will set the upload as anonymous:
 
-  `python3 hades.py -anon -t trk -b -d "/path/to/artist"`
+  `python3 inferno.py -anon -t trk -b -d "/path/to/artist"`
 
 ## Example terminal output
 
