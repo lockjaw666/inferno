@@ -36,7 +36,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 
 `python3 inferno.py -h` for available options.
 
-For now, use `-b`, `-anon`, `-t`, `-pr` and `-du` only. Set other options in `./config/config.toml`.
+For now, use `-b`, `-anon`, `-t`, `-pr`, `-du`, `-s`, `-br`, `-i` only. Set other options in `./config/config.toml`.
 
 ## Example usage
 
@@ -48,9 +48,13 @@ For now, use `-b`, `-anon`, `-t`, `-pr` and `-du` only. Set other options in `./
 
   `python3 inferno.py -t trk -b -d "/path/to/artist"`
 
-* If provided `-anon` flag will set the upload as anonymous:
+* If provided `-anon` parameter will set the upload as anonymous:
 
   `python3 inferno.py -anon -t trk -b -d "/path/to/artist"`
+
+* If provided `-i` parameter will auto-inject torrent to qBittorrent:
+
+  `python3 inferno.py -i -anon -t trk -b -d "/path/to/artist"`
 
 ## Example terminal output
 
