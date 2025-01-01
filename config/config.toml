@@ -1,4 +1,5 @@
 # General
+inferno_logo = "config/logo.txt"
 output_dir = "YOUR_OUTPUT_DIR"
 file_types = [".flac", ".mp3"]
 tracklist_filename = "tracklist.txt"
