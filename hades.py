@@ -7,6 +7,44 @@ import musicbrainzngs
 from mutagen import File
 from torf import Torrent
 
+def load_config():
+    """Load configuration from a TOML file in the 'config' directory."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_file = os.path.join(base_dir, "config", "config.toml")
+    try:
+        with open(config_file, "rb") as f:
+            config = tomli.load(f)
+        return config
+    except Exception as e:
+        log_message(f"Error loading config: {e}")
+        return {}
+
+def inferno_logo():
+    """Display ASCII logo from a text file."""
+    config = load_config()
+    logo_file = config.get("inferno_logo")
+
+    try:
+        with open(os.path.join(logo_file), "r") as f:
+            print(f.read())
+    except FileNotFoundError:
+        log_message("Logo file 'config/logo' not found.", level="ERROR")
+
+def log_message(message, level="SUCCESS"):
+    """
+    Log a message to the terminal with a specific format.
+    :param message: The message to log.
+    :param level: The log level (INFO, WARNING, ERROR, SUCCESS).
+    """
+    levels = {
+        "INFO": "[INFORMATIO] -  ",
+        "WARNING": "[MONITUS] -",
+        "ERROR": "[DEFECTUM]  -",
+        "SUCCESS": "[SUCCESSUS] -"
+    }
+    prefix = levels.get(level, "[INFO]")
+    print(f"{prefix} {message}")
+
 def qb_inject(config, torrent_url, artist):
     qb_url = config['qBittorrent']['qb_url']
     username = config['qBittorrent']['username']
@@ -28,9 +66,9 @@ def qb_inject(config, torrent_url, artist):
 
     # Check if login was successful
     if login_response.status_code == 200:
-        print("qBittorrent login successful!")
+        log_message("qBittorrent login successful!")
     else:
-        print(f"Login failed! Status code: {login_response.status_code}, Response: {login_response.text}")
+        log_message(f"Login failed! Status code: {login_response.status_code}, Response: {login_response.text}")
         return
 
     # Add the torrent from the URL
@@ -46,21 +84,9 @@ def qb_inject(config, torrent_url, artist):
 
     # Check if the torrent was successfully added
     if add_torrent_response.status_code == 200:
-        print(f"Torrent added to qBittorrent.")
+        log_message(f"Torrent added to qBittorrent.")
     else:
-        print(f"Failed to add torrent! Status code: {add_torrent_response.status_code}, Response: {add_torrent_response.text}")
-
-def load_config():
-    """Load configuration from a TOML file in the 'config' directory."""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    config_file = os.path.join(base_dir, "config", "config.toml")
-    try:
-        with open(config_file, "rb") as f:
-            config = tomli.load(f)
-        return config
-    except Exception as e:
-        print(f"Error loading config: {e}")
-        return {}
+        log_message(f"Failed to add torrent! Status code: {add_torrent_response.status_code}, Response: {add_torrent_response.text}")
 
 def setup_musicbrainz(config):
     """Configure the MusicBrainz client using values from config."""
@@ -144,7 +170,7 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
                 files={"image": f}
             )
             
-        # Print the raw returned message from the API. Use for debugging.
+        # Print the raw returned message from imgBB API. Use for debugging.
         # print(response.text)
         
         # Parse the JSON response
@@ -153,9 +179,9 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
         # Check for API rate limit error in the response
         if response.status_code != 200:
             if data.get("status_code") == 400 and data.get("error", {}).get("code") == 100:
-                print("imgBB Error:", data["error"]["message"])
+                log_message(data["error"]["message"], level="ERROR")
                 return None
-            print("Error:", data.get("error", {}).get("message", "Unknown error"))
+            log_message("Error:", data.get("error", {}).get("message", "Unknown error"))
             return None
 
         img_url = data["data"].get("url")
@@ -163,7 +189,7 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
         return f"[url={img_url}][img]{thumb_url}[/img][/url]"
     except requests.exceptions.RequestException as e:
         # Print the exception details
-        print("Request failed:", e)
+        log_message(e, level="ERROR")
         return None
 
 def determine_piece_size(directory_size):
@@ -242,8 +268,7 @@ def create_torrent(directory, output_file, tracker_announce, artist, album, year
     )
 
     # Ensure the name is set correctly inside the torrent
-    torrent.name = f"{artist} - {album} {year} {source} {file_type} {bitrate}"
-
+    torrent.name = os.path.basename(os.path.abspath(directory))
     torrent.generate()
     torrent.write(output_file)
 
@@ -268,7 +293,7 @@ def upload_torrent(
             data = {
                 "name": f"{artist} - {album} {year} {source} {file_type} {bitrate}",
                 "description": description,
-                "category_id": 3,
+                "category_id": 3, # 3 = Music
                 "type_id": type_id,
                 "anonymous": anonymous,
                 "personal_release": personal_release,
@@ -294,18 +319,18 @@ def upload_torrent(
                 torrent_url = response_data.get("data")
 
                 if torrent_url:
-                    print(f"Uploaded Torrent: {torrent_url}")
+                    log_message(f"Uploaded Torrent: {torrent_url}")
                     # Inject the torrent URL into qBittorrent
                     qb_inject(config, torrent_url, artist)
                 else:
-                    print("Error: No torrent URL returned.")
+                    log_message("No torrent URL returned.", level="ERROR")
             elif response.status_code == 404 and 'info_hash' in response.json().get('data', {}):
                 # Handle case where torrent already exists
-                print("Upload Error: This torrent already exists on the tracker.")
+                log_message("This torrent already exists on the tracker.", level="WARNING")
             else:
-                print(f"Failed to upload torrent: {response.status_code} - {response.json()}")
+                log_message(f"Torrent Upload: {response.status_code} - {response.json()}", level="ERROR")
     except Exception as e:
-        print(f"Error uploading torrent: {e}")
+        log_message(f"{e}", level="ERROR")
 
 def process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate):
     try:
@@ -313,7 +338,7 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
         print(f"\n{'#' * 30}\n{artist} - {album} {year}\n{'-' * 30}")
     except Exception as e:
-        print(f"\n{'#' * 30}\nError processing album in directory: {directory} - {str(e)}\n{'#' * 30}")
+        log_message(f"\n{'#' * 30}\nAlbum: {directory} - {str(e)}\n{'#' * 30}", level="ERROR")
         return
 
     output_dir = os.path.join(output_base, artist, f"{album} ({year})")
@@ -329,11 +354,11 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         try:
             cover_art_url = uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
             if cover_art_url:
-                print("Cover Art: Uploaded existing cover.jpg")
+                log_message("Cover Art: Uploaded existing cover.jpg")
             else:
-                print("Cover Art: Upload failed or skipped due to API error.")
+                log_message("Cover Art: Upload failed or skipped due to API error.")
         except Exception as e:
-            print(f"Error uploading local cover.jpg: {str(e)}")
+            log_message(f"Error uploading local cover.jpg: {str(e)}")
     else:
     # Download the cover art if available
         if cover_url:
@@ -343,39 +368,39 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
                     cover_file_name = f"{artist} - {album} {year}.jpg"
                     cover_file_path = os.path.join(output_dir, cover_file_name)
                     os.rename(cover_path, cover_file_path)
-                    print(f"Cover Art: {cover_file_name}")
+                    log_message(f"Cover Art: {cover_file_name}")
                     # Upload cover art to imgbb
                     imgbb_api_key = config.get("imgbb_api_key")
                     imgbb_url = config.get("imgbb_url")
                     uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_file_path, imgbb_url)
                 else:
-                    print("Cover Art: Not Found")
+                    log_message("Cover Art: Not Found")
                     uploaded_cover_url = None
             except Exception as e:
-                print(f"Error downloading cover art: {str(e)}")
+                log_message(f"Error downloading cover art: {str(e)}")
                 uploaded_cover_url = None
 
     # Generate tracklist.txt file
     try:
         tracklist_file = os.path.join(output_dir, config.get("tracklist_filename"))
         generate_track_list(files, tracklist_file, cover_url=uploaded_cover_url)
-        print(f"Track List: {os.path.basename(tracklist_file)}")
+        log_message(f"Track List: {os.path.basename(tracklist_file)}")
     except Exception as e:
-        print(f"Error generating track list for album {album}: {str(e)}")
+        log_message(f"Error generating track list for album {album}: {str(e)}")
 
     # Generate .torrent file with dynamic file type in name
     try:
         torrent_file = os.path.join(output_dir, f"{artist} - {album} {year} {source} {file_type} {bitrate}.torrent")
         create_torrent(directory, torrent_file, tracker_announce, artist, album, year, source, file_type, bitrate)
-        print(f"Torrent File: {os.path.basename(torrent_file)}")
+        log_message(f"Torrent File: {os.path.basename(torrent_file)}")
     except Exception as e:
-        print(f"Error creating torrent file for album {album}: {str(e)}")
+        log_message(f"Error creating torrent file for album {album}: {str(e)}")
 
     # Upload the torrent file to the tracker
     try:
         upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config)
     except Exception as e:
-        print(f"Error uploading torrent for album {album}: {str(e)}")
+        log_message(f"Error uploading torrent for album {album}: {str(e)}")
 
     print(f"{'#' * 30}\n")
 
@@ -387,6 +412,10 @@ def batch_process(artist_directory, config, output_base, tracker_announce, track
             process_album(album_path, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate)
 
 def main():
+
+    # Display the ASCII logo
+    inferno_logo()
+
     # Load configuration from config.json
     config = load_config()
 
@@ -413,7 +442,7 @@ def main():
     tracker_config = config.get("trackers", {}).get(tracker_name)
 
     if not tracker_config:
-        print(f"Error: Tracker flag must be provided or provided tracker code is incorrect.")
+        log_message(f"Error: Tracker flag must be provided or provided tracker code is incorrect.")
         sys.exit(1)
 
     tracker_announce = tracker_config.get("tracker_announce")
