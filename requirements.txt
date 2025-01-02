@@ -2,3 +2,5 @@ requests
 musicbrainzngs
 mutagen
 torf
+pydub
+toml
