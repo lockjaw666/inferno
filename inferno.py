@@ -34,10 +34,10 @@ def inferno_logo():
 # Log setup and formatting
 def log_message(message, level="SUCCESS"):
     levels = {
-        "INFO": "[INFORMATIO] -  ",
-        "WARNING": "[MONITUS] -",
-        "ERROR": "[DEFECTUM]  -",
-        "SUCCESS": "[SUCCESSUS] -"
+        "INFO": "[i] -",
+        "WARNING": "[w] -",
+        "ERROR": "[-] -",
+        "SUCCESS": "[+] -"
     }
     prefix = levels.get(level, "[INFO]")
     print(f"{prefix} {message}")
@@ -62,12 +62,12 @@ def qb_inject(config, torrent_url, artist):
     login_data = {'username': username, 'password': password}
     login_response = session.post(f'{qb_url}/api/v2/auth/login', data=login_data)
 
-    # Check if login was successful
-    if login_response.status_code == 200:
-        log_message("qBittorrent login successful!", level="SUCCESS")
-    else:
-        log_message(f"Login failed! Status code: {login_response.status_code}, Response: {login_response.text}", level="ERROR")
-        return
+    # Check if login was successful. Uncomment to debug
+    # if login_response.status_code == 200:
+    #     log_message("qBittorrent login successful!", level="SUCCESS")
+    # else:
+    #     log_message(f"Login failed! Status code: {login_response.status_code}, Response: {login_response.text}", level="ERROR")
+    #     return
 
     # Add the torrent from the URL
     torrent_data = {
