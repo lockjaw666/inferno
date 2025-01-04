@@ -29,7 +29,7 @@ def inferno_logo():
         with open(os.path.join(logo_file), "r") as f:
             print(f.read())
     except FileNotFoundError:
-        log_message("Logo file 'config/logo' not found.", level="ERROR")
+        log_message("Logo file 'config/logo.txt' not found.", level="ERROR")
 
 # Log setup and formatting
 def log_message(message, level="SUCCESS"):
@@ -62,13 +62,6 @@ def qb_inject(config, torrent_url, artist):
     login_data = {'username': username, 'password': password}
     login_response = session.post(f'{qb_url}/api/v2/auth/login', data=login_data)
 
-    # Check if login was successful. Uncomment to debug
-    # if login_response.status_code == 200:
-    #     log_message("qBittorrent login successful!", level="SUCCESS")
-    # else:
-    #     log_message(f"Login failed! Status code: {login_response.status_code}, Response: {login_response.text}", level="ERROR")
-    #     return
-
     # Add the torrent from the URL
     torrent_data = {
         'urls': torrent_url,
@@ -82,7 +75,7 @@ def qb_inject(config, torrent_url, artist):
 
     # Check if the torrent was successfully added
     if add_torrent_response.status_code == 200:
-        log_message(f"Torrent added to qBittorrent.", level="SUCCESS")
+        log_message(f"Torrent added to qBittorrent", level="SUCCESS")
     else:
         log_message(f"Failed to add torrent! Status code: {add_torrent_response.status_code}, Response: {add_torrent_response.text}", level="ERROR")
 
@@ -107,18 +100,22 @@ def fetch_album_info(directory, config):
         raise FileNotFoundError("No supported audio files found in the specified directory.")
 
     metadata = File(files[0])
-
-    # Handle MP3 files specifically
-    if files[0].lower().endswith(".mp3"):
+    file_extension = files[0].lower().split(".")[-1]
+    # MP3 metadata
+    if file_extension == "mp3":
         artist = metadata.get("TPE1", ["Unknown Artist"])[0]
         album = metadata.get("TALB", ["Unknown Album"])[0]
         year = metadata.get("TDRC", ["Unknown Date"])[0]
-
-    else:
-        # Default FLAC handling
-        artist = metadata.get("artist", ["Unknown Artist"])[0] if metadata.get("artist") else "Unknown Artist"
-        album = metadata.get("album", ["Unknown Album"])[0] if metadata.get("album") else "Unknown Album"
-        year = metadata.get("date", ["Unknown Date"])[0] if metadata.get("date") else "Unknown Date"
+    # FLAC metadata
+    elif file_extension == "flac":
+        artist = metadata.get("artist", ["Unknown Artist"])[0]
+        album = metadata.get("album", ["Unknown Album"])[0]
+        year = metadata.get("date", ["Unknown Date"])[0]
+    # M4A metadata
+    elif file_extension == "m4a":
+        artist = metadata.get("\xa9ART", ["Unknown Artist"])[0]
+        album = metadata.get("\xa9alb", ["Unknown Album"])[0]
+        year = metadata.get("\xa9day", ["Unknown Date"])[0]
 
     release_id = None
     cover_url = None
@@ -284,6 +281,8 @@ def upload_torrent(
                 type_id = 7
             elif file_type.lower() == 'mp3':
                 type_id = 8
+            elif file_type.lower() == 'm4a':
+                type_id = 10
             else:
                 raise ValueError(f"Unsupported file type: {file_type}")
 
@@ -336,7 +335,7 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
         # print(f"\n{'━' * 30}\n+ {artist} - {album} {year} +\n{'-' * 30}")
-        print(f"\n\n+ {artist} - {album} {year} +\n{'━' * 30}")
+        print(f"\n\n+ {artist} - {album} {year} +\n{'━' * 50}")
 
     except Exception as e:
         log_message(f"\n{'-' * 30}\nAlbum: {directory} - {str(e)}\n{'#' * 30}")
@@ -414,11 +413,12 @@ def batch_process(artist_directory, config, output_base, tracker_announce, track
 
 def main():
 
-    # Display the ASCII logo
-    inferno_logo()
-
     # Load configuration from config.json
     config = load_config()
+
+    # Check if the logo should be displayed
+    if config.get("display_logo", True):
+        inferno_logo()
 
     # Setup MusicBrainz with the configuration
     setup_musicbrainz(config)
