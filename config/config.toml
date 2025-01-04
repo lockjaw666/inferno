@@ -1,7 +1,8 @@
 # General
 inferno_logo = "config/logo.txt"
+display_logo = true
 output_dir = "YOUR_OUTPUT_DIR"
-file_types = [".flac", ".mp3"]
+file_types = [".flac", ".mp3", ".m4a"]
 tracklist_filename = "tracklist.txt"
 
 # imgBB API
