@@ -81,7 +81,7 @@ def qb_inject(config, torrent_url, artist):
 
 # Configure the MusicBrainz client using values from config
 def setup_musicbrainz(config):
-    user_agent = config.get("musicbrainz_user_agent", {})
+    user_agent = config.get("musicbrainz", {})
     name = user_agent.get("name")
     version = user_agent.get("version")
     email = user_agent.get("email")
@@ -136,6 +136,14 @@ def fetch_album_info(directory, config):
         pass
 
     return artist, album, year, cover_url, files[0].split('.')[-1].upper(), files
+
+# Check for the existence of cover art based on config
+def local_cover_art(directory, valid_cover_art):
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.lower() in [name.lower() for name in valid_cover_art]:
+                return os.path.join(root, file)
+    return None
 
 # Download album cover art from MusicBrainz if cover.jpg doesn't exist locally
 def download_cover_art(url, output_dir):
@@ -334,7 +342,6 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
     try:
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
-        # print(f"\n{'━' * 30}\n+ {artist} - {album} {year} +\n{'-' * 30}")
         print(f"\n\n+ {artist} - {album} {year} +\n{'━' * 50}")
 
     except Exception as e:
@@ -345,7 +352,8 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
     os.makedirs(output_dir, exist_ok=True)
 
     # Check if cover.jpg exists in the directory
-    cover_path = os.path.join(directory, "cover.jpg")
+    valid_cover_art = config.get("valid_cover_art", ["cover.jpg", "Cover.jpg"])
+    cover_path = local_cover_art(directory, valid_cover_art)
     uploaded_cover_url = None
 
     if os.path.exists(cover_path):
@@ -354,11 +362,11 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         try:
             cover_art_url = uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
             if cover_art_url:
-                log_message("Cover Art: Uploaded existing cover.jpg", level="SUCCESS")
+                log_message("Cover Art: Uploaded existing cover art", level="SUCCESS")
             else:
                 log_message("Cover Art: Upload failed or skipped due to API error.", level="ERROR")
         except Exception as e:
-            log_message(f"Error uploading local cover.jpg: {str(e)}", level="ERROR")
+            log_message(f"Error uploading local cover art: {str(e)}", level="ERROR")
     else:
     # Download the cover art if available
         if cover_url:
