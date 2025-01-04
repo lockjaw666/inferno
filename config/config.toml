@@ -5,6 +5,7 @@ output_dir = "YOUR_OUTPUT_DIR"
 file_types = [".flac", ".mp3", ".m4a"]
 valid_cover_art = ["cover.jpg", "Cover.jpg", "album_art.jpg", "front.jpg"]
 tracklist_filename = "tracklist.txt"
+clear_output_dir = false
 
 # imgBB API
 imgbb_url = "https://api.imgbb.com/1/upload"
