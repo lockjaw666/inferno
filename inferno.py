@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import tomli
 import argparse
 import requests
@@ -41,6 +42,22 @@ def log_message(message, level="SUCCESS"):
     }
     prefix = levels.get(level, "[INFO]")
     print(f"{prefix} {message}")
+
+# Clear the contents of the output directory if the setting is enabled.
+def clear_output_directory(output_dir):
+    if not os.path.exists(output_dir):
+        log_message(f"Output directory '{output_dir}' does not exist. Skipping clearing.", level="INFO")
+        return
+
+    try:
+        for root, dirs, files in os.walk(output_dir):
+            for file in files:
+                os.remove(os.path.join(root, file))
+            for dir in dirs:
+                shutil.rmtree(os.path.join(root, dir))
+        log_message(f"Cleared contents of output directory: {output_dir}", level="SUCCESS")
+    except Exception as e:
+        log_message(f"Error while clearing output directory '{output_dir}': {e}", level="ERROR")
 
 # Inject torrent URL in qBittorrent with options
 def qb_inject(config, torrent_url, artist):
@@ -473,6 +490,16 @@ def main():
         batch_process(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate, args)
     else:
         process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate, args)
+
+    # Resolve the output directory
+    output_base = args.output or config.get("output_dir")
+    if not output_base:
+        log_message("No output directory specified. Please provide one in the config file or via the '-o' option.", level="ERROR")
+        sys.exit(1)
+
+    # Clear the output directory if the setting is enabled
+    if config.get("clear_output_dir"):
+        clear_output_directory(output_base)
 
     print(f"\n+ And so we ascend, our task in the Inferno complete +\n")
 
