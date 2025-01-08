@@ -60,7 +60,7 @@ def clear_output_directory(output_dir):
         log_message(f"Error while clearing output directory '{output_dir}': {e}", level="ERROR")
 
 # Inject torrent URL in qBittorrent with options
-def qb_inject(config, torrent_url, artist):
+def qb_inject(config, torrent_url, directory):
     qb_url = config['qBittorrent']['qb_url']
     username = config['qBittorrent']['username']
     password = config['qBittorrent']['password']
@@ -68,9 +68,12 @@ def qb_inject(config, torrent_url, artist):
     tags = config['qBittorrent']['tags']
     paused = config['qBittorrent']['paused']
 
-    # Dynamically adjust save path
-    save_path_template = config['qBittorrent']['save_path']
-    save_path = save_path_template.format(artist=artist)
+    # Set custom save path with config file. Uncomment and edit below and "save_path" in config/config.toml
+    # save_path_template = config['qBittorrent']['save_path']
+    # save_path = save_path_template.format(artist=artist, file_type=file_type.lower())
+
+    # Set save path to album parent directory (ex. /downloads/music/artist/). Comment this if using config.toml for path
+    save_path = os.path.dirname(directory)
 
     # Create a session to maintain cookies
     session = requests.Session()
@@ -162,7 +165,7 @@ def local_cover_art(directory, valid_cover_art):
                 return os.path.join(root, file)
     return None
 
-# Download album cover art from MusicBrainz if cover.jpg doesn't exist locally
+# Download cover art from MusicBrainz if it doesn't exist locally
 def download_cover_art(url, output_dir):
     if not url:
         return None
@@ -178,6 +181,7 @@ def download_cover_art(url, output_dir):
     except requests.exceptions.RequestException:
         return None
 
+# Upload album cover art to imgBB API
 def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
     """Upload an image to imgbb and return the formatted URL."""
     if not imgbb_api_key or not os.path.exists(image_path):
@@ -189,13 +193,9 @@ def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
                 params={"key": imgbb_api_key},
                 files={"image": f}
             )
-            
-        # Print the raw returned message from imgBB API. Use for debugging.
-        # print(response.text)
         
         # Parse the JSON response
         data = response.json()
-        
         # Check for API rate limit error in the response
         if response.status_code != 200:
             if data.get("status_code") == 400 and data.get("error", {}).get("code") == 100:
@@ -294,7 +294,7 @@ def create_torrent(directory, output_file, tracker_announce, artist, album, year
 # Upload torrent to the selected tracker
 def upload_torrent(
     torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url,
-    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args
+    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory
 ):
     try:
         with open(torrent_path, "rb") as torrent_file:
@@ -344,7 +344,7 @@ def upload_torrent(
                     log_message(f"Uploaded Torrent: {torrent_url}", level="SUCCESS")
                     # Inject the torrent URL into qBittorrent
                     if args.inject:
-                        qb_inject(config, torrent_url, artist)
+                        qb_inject(config, torrent_url, directory)
                 else:
                     log_message("No torrent URL returned.", level="ERROR")
             elif response.status_code == 404 and 'info_hash' in response.json().get('data', {}):
@@ -368,15 +368,16 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
     output_dir = os.path.join(output_base, artist, f"{album} ({year})")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Check if cover.jpg exists in the directory
-    valid_cover_art = config.get("valid_cover_art", ["cover.jpg", "Cover.jpg"])
+    # Check if cover art exists in the directory
+    valid_cover_art = config.get("valid_cover_art")
     cover_path = local_cover_art(directory, valid_cover_art)
     uploaded_cover_url = None
 
-    if os.path.exists(cover_path):
-        imgbb_api_key = config.get("imgbb_api_key")
-        imgbb_url = config.get("imgbb_url")
+    if cover_path:
         try:
+            # If local cover art exists, attempt to upload it
+            imgbb_api_key = config.get("imgbb_api_key")
+            imgbb_url = config.get("imgbb_url")
             cover_art_url = uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
             if cover_art_url:
                 log_message("Cover Art: Uploaded existing cover art", level="SUCCESS")
@@ -385,7 +386,7 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         except Exception as e:
             log_message(f"Error uploading local cover art: {str(e)}", level="ERROR")
     else:
-    # Download the cover art if available
+        # If no local cover art is found, fetch from MusicBrainz
         if cover_url:
             try:
                 cover_path = download_cover_art(cover_url, output_dir)
@@ -405,7 +406,7 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
                 log_message(f"Error downloading cover art: {str(e)}", level="ERROR")
                 uploaded_cover_url = None
 
-    # Generate tracklist.txt file
+    # Generate tracklist
     try:
         tracklist_file = os.path.join(output_dir, config.get("tracklist_filename"))
         generate_track_list(files, tracklist_file, cover_url=uploaded_cover_url)
@@ -423,11 +424,9 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
 
     # Upload the torrent file to the tracker
     try:
-        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args)
+        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory)
     except Exception as e:
         log_message(f"Error uploading torrent for album {album}: {str(e)}", level="ERROR")
-
-    # print(f"{'━' * 30}\n")
 
 def batch_process(artist_directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args):
     # Process all albums in the artist directory
@@ -456,7 +455,7 @@ def main():
     parser.add_argument("-t", "--tracker", required=True, help="Tracker name(s) from config.json.")
     parser.add_argument("-anon", "--anonymous", action="store_true", help="Set upload as anonymous. Defaults to non-anonymous, if not specified.")
     parser.add_argument("-s", "--source", required=True, help="Source of the files (e.g., WEB, CD).")
-    parser.add_argument("-br", "--bitrate", required=True, help="Bitrate of the files (e.g., V0, 320).")
+    parser.add_argument("-br", "--bitrate", required=False, help="Bitrate of the files (e.g., V0, 320).")
     parser.add_argument("-pr", "--personal_release", action="store_true", help="Set upload as personal release. Defaults to non-personal release, if not specified.")
     parser.add_argument("-du", "--doubleup", action="store_true", help="Set torrent as double upload. Only available to staff and internal users.")
     parser.add_argument("-i", "--inject", action="store_true", help="Inject the torrent URL into qBittorrent after upload.")
