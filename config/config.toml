@@ -24,7 +24,7 @@ username = "QB_USERNAME"
 password = "QB_PASSWORD"
 category = "MUSIC"
 tags = "MUSIC"
-save_path = "/downloads/music/mp3/{artist}"
+# save_path = "/downloads/music/mp3/{artist}"
 paused = "false"
 
 # Trackers
