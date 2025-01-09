@@ -79,7 +79,6 @@ Duplicate torrent:
 [+] - Track List: tracklist.txt
 [+] - Torrent File: Artist - Album - Year (FLAC).torrent
 [-] - Upload Error: This torrent already exists on the tracker.
-##############################
 ```
 
 ## Example tracklist.txt
