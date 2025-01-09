@@ -21,6 +21,11 @@ def load_config():
         log_message(f"Error loading config: {e}", level="ERROR")
         return {}
 
+# Load tracker specific dynamic configurations
+def get_tracker_config(config, tracker_name):
+    trackers = config.get("trackers", {})
+    return trackers.get(tracker_name, {})
+
 # Logo function
 def inferno_logo():
     """Display ASCII logo from a text file."""
@@ -304,8 +309,11 @@ def create_torrent(directory, output_file, tracker_announce, artist, album, year
 # Upload torrent to the selected tracker
 def upload_torrent(
     torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url,
-    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory, media_info
+    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, tracker_name, config, args, directory, media_info
 ):
+    tracker_config = get_tracker_config(config, tracker_name)
+    category_id = tracker_config.get("category_id")
+
     try:
         with open(torrent_path, "rb") as torrent_file:
             with open(tracklist_path, "r") as tracklist_file:
@@ -315,7 +323,7 @@ def upload_torrent(
             if file_type.lower() == 'flac':
                 type_id = 7
             elif file_type.lower() == 'mp3':
-                type_id = 8 # 8-YOINK, 11-FNP
+                type_id = 11 # 8-YOINK, 11-FNP
             elif file_type.lower() == 'm4a':
                 type_id = 10
             else:
@@ -325,7 +333,7 @@ def upload_torrent(
             data = {
                 "name": f"{artist} - {album} {year} {source} {file_type} {bitrate}",
                 "description": description,
-                "category_id": 3, # 3 = Music
+                "category_id": category_id,
                 "type_id": type_id,
                 "anonymous": anonymous,
                 "personal_release": personal_release,
@@ -366,7 +374,7 @@ def upload_torrent(
     except Exception as e:
         log_message(f"{e}", level="ERROR")
 
-def process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args):
+def process_album(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args):
     try:
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
@@ -439,16 +447,16 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
 
     # Upload the torrent file to the tracker
     try:
-        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory, media_info)
+        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, tracker_name, config, args, directory, media_info)
     except Exception as e:
         log_message(f"Error uploading torrent for album {album}: {str(e)}", level="ERROR")
 
-def batch_process(artist_directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args):
+def batch_process(artist_directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args):
     # Process all albums in the artist directory
     for album_dir in os.listdir(artist_directory):
         album_path = os.path.join(artist_directory, album_dir)
         if os.path.isdir(album_path):
-            process_album(album_path, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args)
+            process_album(album_path, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args)
 
 def main():
 
@@ -501,9 +509,9 @@ def main():
     doubleup = 1 if args.doubleup else 0
 
     if args.batch:
-        batch_process(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate, args)
+        batch_process(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate, args)
     else:
-        process_album(directory, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate, args)
+        process_album(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, args.source, args.bitrate, args)
 
     # Resolve the output directory
     output_base = args.output or config.get("output_dir")
