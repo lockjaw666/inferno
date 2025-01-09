@@ -32,8 +32,10 @@ paused = "false"
 tracker_announce = "https://yoinked.org/announce/YOUR_ANNOUNCE"
 tracker_api_url = "https://yoinked.org/api/torrents/upload"
 tracker_api_token = "YOUR_API_TOKEN"
+category_id = 8
 
 [trackers.othertracker]
 tracker_announce = "https://othertracker.com/announce/xxx"
 tracker_api_url = "https://othertracker.com/api/torrents/upload"
 tracker_api_token = "xxx"
+category_id = 11
