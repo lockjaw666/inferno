@@ -31,7 +31,9 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 2. Place in whichever directory works for you
 3. Install dependencies `pip3 install -r requirements.txt`
 4. Edit `./config/config.toml`
-
+5. Install `mediainfo`
+   * Linux: `apt install madiainfo`
+   * MacOS: `brew install --cask mediainfo`
 
 ## Run options
 
@@ -61,24 +63,22 @@ For now, use `-b`, `-anon`, `-t`, `-pr`, `-du`, `-s`, `-br`, `-i` only. Set othe
 
 Successful Upload:
 ```
-##############################
-Artist - Album - Year
-------------------------------
-Cover Art: Artist - Album - Year.jpg
-Track List: tracklist.txt
-Torrent File: Artist - Album - Year (FLAC).torrent
-Uploaded Torrent: https://tracker.com/torrent/download/1234567890
-##############################
++ Artis - Album Year +
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[+] - Cover Art: Uploaded existing cover art
+[+] - Track List: tracklist.txt
+[+] - Torrent File: Artist - Album - Year (FLAC).torrent
+[+] - Uploaded Torrent: https://tracker.com/torrent/download/xxx
+[+] - Torrent added to qBittorrent
 ```
 Duplicate torrent:
 ```
-##############################
-Artist - Album - Year
-------------------------------
-Cover Art: Artist - Album - Year.jpg
-Track List: tracklist.txt
-Torrent File: Artist - Album - Year (FLAC).torrent
-Upload Error: This torrent already exists on the tracker.
++ Artis - Album Year +
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[+] - Cover Art: Uploaded existing cover art
+[+] - Track List: tracklist.txt
+[+] - Torrent File: Artist - Album - Year (FLAC).torrent
+[-] - Upload Error: This torrent already exists on the tracker.
 ##############################
 ```
 
