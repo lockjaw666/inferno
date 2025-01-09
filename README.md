@@ -19,6 +19,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 * Single album processing or batch all
 * Set tracker options (personal release, double upload)
 * Handling of multi-disc albums
+* Generate and upload `mediainfo` with torrent file (requires MediaInfo installation)
 * Options configurable via `config.toml`
 * Supports Linux and MacOS (Windows: ¯\\_(ツ)_/¯ )
 
