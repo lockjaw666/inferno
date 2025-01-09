@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import subprocess
 import tomli
 import argparse
 import requests
@@ -42,6 +43,15 @@ def log_message(message, level="SUCCESS"):
     }
     prefix = levels.get(level, "[INFO]")
     print(f"{prefix} {message}")
+
+# Extract media info from first file using mediainfo
+def get_media_info(file_path):
+    try:
+        result = subprocess.run(["mediainfo", file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return result.stdout
+    except Exception as e:
+        log_message(f"Error extracting media info from {file_path}: {e}", level="ERROR")
+        return None
 
 # Clear the contents of the output directory if the setting is enabled.
 def clear_output_directory(output_dir):
@@ -294,7 +304,7 @@ def create_torrent(directory, output_file, tracker_announce, artist, album, year
 # Upload torrent to the selected tracker
 def upload_torrent(
     torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url,
-    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory
+    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory, media_info
 ):
     try:
         with open(torrent_path, "rb") as torrent_file:
@@ -305,7 +315,7 @@ def upload_torrent(
             if file_type.lower() == 'flac':
                 type_id = 7
             elif file_type.lower() == 'mp3':
-                type_id = 8
+                type_id = 8 # 8-YOINK, 11-FNP
             elif file_type.lower() == 'm4a':
                 type_id = 10
             else:
@@ -321,6 +331,7 @@ def upload_torrent(
                 "personal_release": personal_release,
                 "doubleup": doubleup,
                 "api_token": tracker_api_token,
+                "mediainfo": media_info,
                 "tmdb": 0,
                 "imdb": 0,
                 "tvdb": 0,
@@ -360,6 +371,10 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
         print(f"\n\n+ {artist} - {album} {year} +\n{'━' * 50}")
+
+        # Extract media info for the first track
+        first_track_path = files[0]
+        media_info = get_media_info(first_track_path)
 
     except Exception as e:
         log_message(f"\n{'-' * 30}\nAlbum: {directory} - {str(e)}\n{'#' * 30}")
@@ -424,7 +439,7 @@ def process_album(directory, config, output_base, tracker_announce, tracker_api_
 
     # Upload the torrent file to the tracker
     try:
-        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory)
+        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, config, args, directory, media_info)
     except Exception as e:
         log_message(f"Error uploading torrent for album {album}: {str(e)}", level="ERROR")
 
