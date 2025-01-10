@@ -313,21 +313,17 @@ def upload_torrent(
 ):
     tracker_config = get_tracker_config(config, tracker_name)
     category_id = tracker_config.get("category_id")
+    type_ids = tracker_config.get("type_ids", {})
 
     try:
+        # Set the type_id dynamically based on file_type
+        type_id = type_ids.get(file_type.lower())
+        if type_id is None:
+            raise ValueError(f"Unsupported file type '{file_type}' for tracker '{tracker_name}'")
+        
         with open(torrent_path, "rb") as torrent_file:
             with open(tracklist_path, "r") as tracklist_file:
                 description = tracklist_file.read()
-
-            # Set the type_id dynamically based on file_type
-            if file_type.lower() == 'flac':
-                type_id = 7
-            elif file_type.lower() == 'mp3':
-                type_id = 11 # 8-YOINK, 11-FNP
-            elif file_type.lower() == 'm4a':
-                type_id = 10
-            else:
-                raise ValueError(f"Unsupported file type: {file_type}")
 
             files = {"torrent": torrent_file}
             data = {
