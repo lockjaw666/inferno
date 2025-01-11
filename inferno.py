@@ -183,10 +183,15 @@ def fetch_album_info(directory, config):
     return artist, album, year, cover_url, files[0].split('.')[-1].upper(), files
 
 # Check for the existence of cover art based on config
-def local_cover_art(directory, valid_cover_art):
+def local_cover_art(directory, valid_cover_art, artist, album):
+    # Process valid_cover_art to replace placeholders
+    valid_cover_art_processed = [
+        name.format(artist=artist, album=album) for name in valid_cover_art
+    ]
+    
     for root, _, files in os.walk(directory):
         for file in files:
-            if file.lower() in [name.lower() for name in valid_cover_art]:
+            if file.lower() in [name.lower() for name in valid_cover_art_processed]:
                 return os.path.join(root, file)
     return None
 
@@ -399,7 +404,7 @@ def process_album(directory, tracker_name, config, output_base, tracker_announce
 
     # Check if cover art exists in the directory
     valid_cover_art = config.get("valid_cover_art")
-    cover_path = local_cover_art(directory, valid_cover_art)
+    cover_path = local_cover_art(directory, valid_cover_art, artist, album)
     uploaded_cover_url = None
 
     if cover_path:
