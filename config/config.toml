@@ -3,7 +3,7 @@ inferno_logo = "config/logo.txt"
 display_logo = true
 output_dir = "YOUR_OUTPUT_DIR"
 file_types = [".flac", ".mp3", ".m4a"]
-valid_cover_art = ["cover.jpg", "Cover.jpg", "album_art.jpg", "front.jpg"]
+valid_cover_art = ["cover.jpg", "front.jpg", "{artist} - {album}.jpg"]
 tracklist_filename = "tracklist.txt"
 clear_output_dir = false
 
