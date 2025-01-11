@@ -152,6 +152,16 @@ def fetch_album_info(directory, config):
         album = metadata.get("\xa9alb", ["Unknown Album"])[0]
         year = metadata.get("\xa9day", ["Unknown Date"])[0]
 
+    # If date tag contains full date, convert to 4 digit year
+    try:
+        year = str(year)
+        if len(year) >= 4 and year[:4].isdigit():
+            year = year[:4]
+        else:
+            year = "Unknown Year"
+    except (TypeError, ValueError):
+        year = "Unknown Year"
+
     release_id = None
     cover_url = None
 
