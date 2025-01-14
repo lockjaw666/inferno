@@ -39,12 +39,13 @@ def inferno_logo():
         log_message("Logo file 'config/logo.txt' not found.", level="ERROR")
 
 # Log setup and formatting
-def log_message(message, level="SUCCESS"):
+def log_message(message, level="SUCCESS", dry_run=False):
     levels = {
         "INFO": "[i] -",
         "WARNING": "[w] -",
         "ERROR": "[-] -",
-        "SUCCESS": "[+] -"
+        "SUCCESS": "[+] -",
+        "DRY RUN": "[DRY RUN] -"
     }
     prefix = levels.get(level, "[INFO]")
     print(f"{prefix} {message}")
@@ -75,7 +76,11 @@ def clear_output_directory(output_dir):
         log_message(f"Error while clearing output directory '{output_dir}': {e}", level="ERROR")
 
 # Inject torrent URL in qBittorrent with options
-def qb_inject(config, torrent_url, directory):
+def qb_inject(config, torrent_url, directory, dry_run=False):
+    if dry_run:
+        log_message(f"Simulating torrent injection to qBittorrent with URL: {torrent_url}", level="INFO", dry_run=True)
+        return
+    
     qb_url = config['qBittorrent']['qb_url']
     username = config['qBittorrent']['username']
     password = config['qBittorrent']['password']
@@ -212,8 +217,11 @@ def download_cover_art(url, output_dir):
         return None
 
 # Upload album cover art to imgBB API
-def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url):
-    """Upload an image to imgbb and return the formatted URL."""
+def upload_to_imgbb(imgbb_api_key, image_path, imgbb_url, dry_run=False):
+    if dry_run:
+        log_message(f"Simulating upload to imgBB for image: {image_path}", level="INFO", dry_run=True)
+        return f"[url=DRY_RUN][img=DRY_RUN][/img][/url]"
+    
     if not imgbb_api_key or not os.path.exists(image_path):
         return None
     try:
@@ -324,8 +332,12 @@ def create_torrent(directory, output_file, tracker_announce, artist, album, year
 # Upload torrent to the selected tracker
 def upload_torrent(
     torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url,
-    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, tracker_name, config, args, directory, media_info
+    tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, tracker_name, config, args, directory, media_info, dry_run=False
 ):
+    if dry_run:
+        log_message("Simulating torrent upload to tracker.", level="INFO", dry_run=True)
+        return
+    
     tracker_config = get_tracker_config(config, tracker_name)
     category_id = tracker_config.get("category_id")
     type_ids = tracker_config.get("type_ids", {})
@@ -400,67 +412,72 @@ def process_album(directory, tracker_name, config, output_base, tracker_announce
         return
 
     output_dir = os.path.join(output_base, artist, f"{album} ({year})")
-    os.makedirs(output_dir, exist_ok=True)
+    if not args.dry_run:
+        os.makedirs(output_dir, exist_ok=True)
+    else:
+        log_message(f"Output Directory: {output_dir}", level="DRY RUN")
 
     # Check if cover art exists in the directory
     valid_cover_art = config.get("valid_cover_art")
     cover_path = local_cover_art(directory, valid_cover_art, artist, album)
-    uploaded_cover_url = None
 
     if cover_path:
-        try:
-            # If local cover art exists, attempt to upload it
-            imgbb_api_key = config.get("imgbb_api_key")
-            imgbb_url = config.get("imgbb_url")
-            cover_art_url = uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_path, imgbb_url)
-            if cover_art_url:
-                log_message("Cover Art: Uploaded existing cover art", level="SUCCESS")
-            else:
-                log_message("Cover Art: Upload failed or skipped due to API error.", level="ERROR")
-        except Exception as e:
-            log_message(f"Error uploading local cover art: {str(e)}", level="ERROR")
-    else:
-        # If no local cover art is found, fetch from MusicBrainz
-        if cover_url:
+        if args.dry_run:
+            log_message(f"Cover Art: {cover_path}", level="DRY RUN")
+        else:
             try:
-                cover_path = download_cover_art(cover_url, output_dir)
-                if cover_path:
-                    cover_file_name = f"{artist} - {album} {year}.jpg"
-                    cover_file_path = os.path.join(output_dir, cover_file_name)
-                    os.rename(cover_path, cover_file_path)
-                    log_message(f"Cover Art: {cover_file_name}")
-                    # Upload cover art to imgbb
-                    imgbb_api_key = config.get("imgbb_api_key")
-                    imgbb_url = config.get("imgbb_url")
-                    uploaded_cover_url = upload_to_imgbb(imgbb_api_key, cover_file_path, imgbb_url)
-                else:
-                    log_message("Cover Art: Not Found", level="ERROR")
-                    uploaded_cover_url = None
+                uploaded_cover_url = upload_to_imgbb(config.get("imgbb_api_key"), cover_path, config.get("imgbb_url"))
+                log_message("Cover Art: Uploaded existing cover art", level="SUCCESS")
             except Exception as e:
-                log_message(f"Error downloading cover art: {str(e)}", level="ERROR")
-                uploaded_cover_url = None
+                log_message(f"Error uploading local cover art: {str(e)}", level="ERROR")
+    else:
+        log_message("No local cover art found.", level="DRY RUN", dry_run=args.dry_run)
+        if cover_url:
+            if args.dry_run:
+                log_message(f"Would download: {cover_url}", level="DRY RUN")
+            else:
+                try:
+                    cover_path = download_cover_art(cover_url, output_dir)
+                    if cover_path:
+                        cover_file_name = f"{artist} - {album} {year}.jpg"
+                        cover_file_path = os.path.join(output_dir, cover_file_name)
+                        os.rename(cover_path, cover_file_path)
+                        uploaded_cover_url = upload_to_imgbb(config.get("imgbb_api_key"), cover_file_path, config.get("imgbb_url"))
+                    else:
+                        log_message("Cover Art: Not Found", level="ERROR")
+                except Exception as e:
+                    log_message(f"Error downloading cover art: {str(e)}", level="ERROR")
 
     # Generate tracklist
-    try:
-        tracklist_file = os.path.join(output_dir, config.get("tracklist_filename"))
-        generate_track_list(files, tracklist_file, cover_url=uploaded_cover_url)
-        log_message(f"Track List: {os.path.basename(tracklist_file)}")
-    except Exception as e:
-        log_message(f"Error generating track list for album {album}: {str(e)}", level="ERROR")
+    if args.dry_run:
+        log_message(f"Tracklist: {output_dir}", level="DRY RUN")
+    else:
+        try:
+            tracklist_file = os.path.join(output_dir, config.get("tracklist_filename"))
+            generate_track_list(files, tracklist_file, cover_url=uploaded_cover_url)
+            log_message(f"Tracklist File: {os.path.basename(tracklist_file)}")
+        except Exception as e:
+            log_message(f"Error generating track list for album {album}: {str(e)}", level="ERROR")
 
     # Generate .torrent file with dynamic file type in name
-    try:
-        torrent_file = os.path.join(output_dir, f"{artist} - {album} {year} {source} {file_type} {bitrate}.torrent")
-        create_torrent(directory, torrent_file, tracker_announce, artist, album, year, source, file_type, bitrate)
-        log_message(f"Torrent File: {os.path.basename(torrent_file)}")
-    except Exception as e:
-        log_message(f"Error creating torrent file for album {album}: {str(e)}", level="ERROR")
+    if args.dry_run:
+        log_message(f"Torrent File: '{artist} - {album} {year} {source} {file_type} {bitrate}.torrent'", level="DRY RUN")
+    else:
+        try:
+            torrent_file = os.path.join(output_dir, f"{artist} - {album} {year} {source} {file_type} {bitrate}.torrent")
+            create_torrent(directory, torrent_file, tracker_announce, artist, album, year, source, file_type, bitrate)
+            log_message(f"Torrent File: {os.path.basename(torrent_file)}")
+        except Exception as e:
+            log_message(f"Error creating torrent file for album {album}: {str(e)}", level="ERROR")
 
     # Upload the torrent file to the tracker
-    try:
-        upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, tracker_name, config, args, directory, media_info)
-    except Exception as e:
-        log_message(f"Error uploading torrent for album {album}: {str(e)}", level="ERROR")
+    if args.dry_run:
+        log_message(f"Upload Torrent: '{artist} - {album} {year} {source} {file_type} {bitrate}.torrent'", level="DRY RUN")
+    else:
+        try:
+            upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, tracker_name, config, args, directory, media_info)
+        except Exception as e:
+            log_message(f"Error uploading torrent for album {album}: {str(e)}", level="ERROR")
 
 def batch_process(artist_directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, source, bitrate, args):
     # Process all albums in the artist directory
@@ -482,17 +499,18 @@ def main():
     setup_musicbrainz(config)
 
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Generate a .torrent file and metadata for audio files.")
+    parser = argparse.ArgumentParser(description="Audio uploader for UNIT3D trackers.")
     parser.add_argument("-d", "--directory", required=True, help="Path to the directory containing audio files or an artist directory.")
     parser.add_argument("-b", "--batch", action="store_true", help="Batch process all albums in an artist directory.")
     parser.add_argument("-o", "--output", help="Output directory. Defaults to config.json if not specified.")
-    parser.add_argument("-t", "--tracker", required=True, help="Tracker name(s) from config.json.")
+    parser.add_argument("-t", "--tracker", required=True, help="Tracker name from config.json.")
     parser.add_argument("-anon", "--anonymous", action="store_true", help="Set upload as anonymous. Defaults to non-anonymous, if not specified.")
     parser.add_argument("-s", "--source", required=True, help="Source of the files (e.g., WEB, CD).")
     parser.add_argument("-br", "--bitrate", required=False, help="Bitrate of the files (e.g., V0, 320).")
     parser.add_argument("-pr", "--personal_release", action="store_true", help="Set upload as personal release. Defaults to non-personal release, if not specified.")
     parser.add_argument("-du", "--doubleup", action="store_true", help="Set torrent as double upload. Only available to staff and internal users.")
     parser.add_argument("-i", "--inject", action="store_true", help="Inject the torrent URL into qBittorrent after upload.")
+    parser.add_argument("-dr", "--dry-run", action="store_true", help="Simulate operations without making actual changes.")
 
     args = parser.parse_args()
 
