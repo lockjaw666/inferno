@@ -20,6 +20,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 * Set tracker options (personal release, double upload)
 * Handling of multi-disc albums
 * Generate and upload `mediainfo` with torrent file (requires MediaInfo installation)
+* Dry Run mode
 * Options configurable via `config.toml`
 * Supports Linux and MacOS (Windows: ¯\\_(ツ)_/¯ )
 
@@ -79,6 +80,16 @@ Duplicate torrent:
 [+] - Track List: tracklist.txt
 [+] - Torrent File: Artist - Album - Year (FLAC).torrent
 [-] - Upload Error: This torrent already exists on the tracker.
+```
+Dry Run mode:
+```
++ Artis - Album Year +
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[DRY RUN] - Output Directory: /path/to/output/directory
+[DRY RUN] - Cover Art: /path/to/album/directory/cover.jpg
+[DRY RUN] - Tracklist: /path/to/output/directory
+[DRY RUN] - Torrent File: 'Artist - Album Year CD FLAC Lossless.torrent'
+[DRY RUN] - Upload Torrent: 'Artist - Album Year CD FLAC Lossless.torrent'
 ```
 
 ## Example tracklist.txt
