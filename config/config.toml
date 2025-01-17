@@ -28,9 +28,9 @@ tags = "MUSIC"
 paused = "false"
 
 # Trackers
-[trackers.yoink]
-tracker_announce = "https://yoinked.org/announce/YOUR_ANNOUNCE"
-tracker_api_url = "https://yoinked.org/api/torrents/upload"
+[trackers.sometracker]
+tracker_announce = "https://TRACKER_DOMAIN/announce/YOUR_ANNOUNCE"
+tracker_api_url = "https://TRACKER_DOMAIN/api/torrents/upload"
 tracker_api_token = "YOUR_API_TOKEN"
 category_id = 3
 type_ids = { "flac" = 7, "mp3" = 8 }
