@@ -2,10 +2,11 @@
 inferno_logo = "config/logo.txt"
 display_logo = true
 output_dir = "YOUR_OUTPUT_DIR"
+clear_output_dir = false
 file_types = [".flac", ".mp3", ".m4a"]
 valid_cover_art = ["cover.jpg", "front.jpg", "{artist} - {album}.jpg"]
 tracklist_filename = "tracklist.txt"
-clear_output_dir = false
+signature = "[center][url=https://github.com/lockjaw666/inferno]+ u·t  s·u·p·r·a,  s·i·c  i·n·f·r·a +[/url][/center]"
 
 # imgBB API
 imgbb_url = "https://api.imgbb.com/1/upload"
