@@ -276,7 +276,7 @@ def calculate_directory_size(directory):
     return total_size
 
 # Generate a text file with track names, lengths, and album cover URL
-def generate_track_list(files, output_file, cover_url=None):
+def generate_track_list(config, files, output_file, cover_url=None):
     track_list = []
     disc_tracks = {}
     total_seconds = 0
@@ -311,6 +311,10 @@ def generate_track_list(files, output_file, cover_url=None):
         # Add cover URL if available
         if cover_url:
             f.write(f"\n{cover_url}\n")
+
+        # Signature line
+        signature = config.get("signature")
+        f.write(f"{signature}")
 
 # Generate a .torrent file with dynamic piece size
 def create_torrent(directory, output_file, tracker_announce, artist, album, year, source, file_type, bitrate):
@@ -454,7 +458,7 @@ def process_album(directory, tracker_name, config, output_base, tracker_announce
     else:
         try:
             tracklist_file = os.path.join(output_dir, config.get("tracklist_filename"))
-            generate_track_list(files, tracklist_file, cover_url=uploaded_cover_url)
+            generate_track_list(config, files, tracklist_file, cover_url=uploaded_cover_url)
             log_message(f"Tracklist File: {os.path.basename(tracklist_file)}")
         except Exception as e:
             log_message(f"Error generating track list for album {album}: {str(e)}", level="ERROR")
