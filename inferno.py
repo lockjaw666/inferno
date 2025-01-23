@@ -336,7 +336,7 @@ def create_torrent(directory, output_file, tracker_announce, artist, album, year
 # Upload torrent to the selected tracker
 def upload_torrent(
     torrent_path, tracklist_path, artist, album, year, file_type, tracker_api_url,
-    tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, source, bitrate, tracker_name, config, args, directory, media_info, dry_run=False
+    tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, source, bitrate, tracker_name, config, args, directory, media_info, dry_run=False
 ):
     if dry_run:
         log_message("Simulating torrent upload to tracker.", level="INFO", dry_run=True)
@@ -367,6 +367,8 @@ def upload_torrent(
                 "doubleup": doubleup,
                 "internal": internal,
                 "refundable": refundable,
+                "featured": featured,
+                "sticky": sticky,
                 "api_token": tracker_api_token,
                 "mediainfo": media_info,
                 "tmdb": 0,
@@ -403,7 +405,7 @@ def upload_torrent(
     except Exception as e:
         log_message(f"{e}", level="ERROR")
 
-def process_album(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, source, bitrate, args):
+def process_album(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, source, bitrate, args):
     try:
         # Fetch album info and set up output directory
         artist, album, year, cover_url, file_type, files = fetch_album_info(directory, config)
@@ -481,16 +483,16 @@ def process_album(directory, tracker_name, config, output_base, tracker_announce
         log_message(f"Upload Torrent: '{artist} - {album} {year} {source} {file_type} {bitrate}.torrent'", level="DRY RUN")
     else:
         try:
-            upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, source, bitrate, tracker_name, config, args, directory, media_info)
+            upload_torrent(torrent_file, tracklist_file, artist, album, year, file_type, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, source, bitrate, tracker_name, config, args, directory, media_info)
         except Exception as e:
             log_message(f"Error uploading torrent for album {album}: {str(e)}", level="ERROR")
 
-def batch_process(artist_directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, source, bitrate, args):
+def batch_process(artist_directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, source, bitrate, args):
     # Process all albums in the artist directory
     for album_dir in os.listdir(artist_directory):
         album_path = os.path.join(artist_directory, album_dir)
         if os.path.isdir(album_path):
-            process_album(album_path, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, source, bitrate, args)
+            process_album(album_path, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, source, bitrate, args)
 
 def main():
 
@@ -517,6 +519,8 @@ def main():
     parser.add_argument("-du", "--doubleup", action="store_true", help="Set torrent as double upload. Only available to staff and internal users.")
     parser.add_argument("-in", "--internal", action="store_true", help="Set torrent as internal release. Only available to staff and internal users.")
     parser.add_argument("-re", "--refundable", action="store_true", help="Set torrent as refundable release. Only available to staff and internal users.")
+    parser.add_argument("-f", "--featured", action="store_true", help="Set torrent as featured release. Only available to staff and internal users.")
+    parser.add_argument("-st", "--sticky", action="store_true", help="Set torrent as sticky release. Only available to staff and internal users.")
     parser.add_argument("-i", "--inject", action="store_true", help="Inject the torrent URL into qBittorrent after upload.")
     parser.add_argument("-dr", "--dry-run", action="store_true", help="Simulate operations without making actual changes.")
 
@@ -551,10 +555,16 @@ def main():
     # Set the 'refundable' value based on the flag
     refundable = 1 if args.refundable else 0
 
+    # Set the 'featured' value based on the flag
+    featured = 1 if args.featured else 0
+
+    # Set the 'sticky' value based on the flag
+    sticky = 1 if args.sticky else 0
+
     if args.batch:
-        batch_process(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, args.source, args.bitrate, args)
+        batch_process(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, args.source, args.bitrate, args)
     else:
-        process_album(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, args.source, args.bitrate, args)
+        process_album(directory, tracker_name, config, output_base, tracker_announce, tracker_api_url, tracker_api_token, anonymous, personal_release, doubleup, internal, refundable, featured, sticky, args.source, args.bitrate, args)
 
     # Resolve the output directory
     output_base = args.output or config.get("output_dir")
