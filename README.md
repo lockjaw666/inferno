@@ -8,7 +8,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 ## Features
 
 * Extracts Vorbis/ID3 tags from FLAC/MP3 files
-* Check for existing cover art (cover.jpg)
+* Check for existing cover art (cover.jpg etc.)
 * Downloads album cover art from MusizBrainz
 * Uploads album cover art to imgbb.com
 * Generates text file with all gathered information
@@ -17,7 +17,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 * Auto-inject torrent URL into qBittorrent
 * Anonymous and non-anonymous uploads
 * Single album processing or batch all
-* Set tracker options (personal release, double upload)
+* Set tracker options (personal release, double upload etc.)
 * Handling of multi-disc albums
 * Generate and upload `mediainfo` with torrent file (requires MediaInfo installation)
 * Dry Run mode
@@ -32,15 +32,15 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 2. Place in whichever directory works for you
 3. Install dependencies `pip3 install -r requirements.txt`
 4. Edit `./config/config.toml`
-5. Install `mediainfo`
+5. Install `MediaInfo`
    * Linux: `apt install madiainfo`
-   * MacOS: `brew install --cask mediainfo`
+   * MacOS: [MediaInfo CLI](https://mediaarea.net/en/MediaInfo/Download/Mac_OS)
 
 ## Run options
 
 `python3 inferno.py -h` for available options.
 
-For now, use `-b`, `-anon`, `-t`, `-pr`, `-du`, `-s`, `-br`, `-i` only. Set other options in `./config/config.toml`.
+ Set other options in `./config/config.toml`.
 
 ## Example usage
 
