@@ -14,6 +14,7 @@ FLAC/MP3 Audio Uploader for UNIT3D Trackers.
 * Generates text file with all gathered information
 * Generates `.torrent` file
 * Uploads torrent via tracker API
+* Per tracker upload template
 * Auto-inject torrent URL into qBittorrent
 * Anonymous and non-anonymous uploads
 * Single album processing or batch all
@@ -112,3 +113,9 @@ Album Length: 31:47
 
 [url=https://i.ibb.co/DXxg/Artist-Album-Year.jpg][img]https://i.ibb.co/pf9T/Artist-Album-Year.jpg[/img][/url]
 ```
+
+## Supported trackers
+
+* [YOiNKED](https://yoinked.org)
+* [FearNoPeer](https://fearnopeer.com)
+* [Aither](https://aither.cc) - Coming soon
